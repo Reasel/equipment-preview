@@ -16,8 +16,10 @@ import net.runelite.api.ItemComposition;
 import net.runelite.api.ItemContainer;
 import net.runelite.api.gameval.InterfaceID;
 import net.runelite.api.gameval.InventoryID;
+import net.runelite.api.gameval.SpriteID;
 import net.runelite.api.widgets.Widget;
 import net.runelite.client.game.ItemManager;
+import net.runelite.client.game.SpriteManager;
 import net.runelite.client.ui.JagexColors;
 import net.runelite.client.ui.overlay.OverlayLayer;
 import net.runelite.client.ui.overlay.OverlayPanel;
@@ -33,7 +35,10 @@ class EquipmentPreviewOverlay extends OverlayPanel
 {
 	private static final int GAP_X = 6;
 	private static final int PANEL_GAP = 6;
-	private static final int PANEL_WIDTH = 3 * Constants.ITEM_SPRITE_WIDTH + 2 * GAP_X
+	private static final int SLOT_SIZE_ADJUSTMENT = 2;
+	private static final int SLOT_WIDTH = Constants.ITEM_SPRITE_WIDTH + SLOT_SIZE_ADJUSTMENT;
+	private static final int SLOT_HEIGHT = Constants.ITEM_SPRITE_HEIGHT + SLOT_SIZE_ADJUSTMENT;
+	private static final int PANEL_WIDTH = 3 * SLOT_WIDTH + 2 * GAP_X
 		+ 2 * ComponentConstants.STANDARD_BORDER;
 	private static final int[] DISPLAY_SLOTS = {
 		-1, EquipmentInventorySlot.HEAD.getSlotIdx(), -1,
@@ -43,23 +48,25 @@ class EquipmentPreviewOverlay extends OverlayPanel
 		EquipmentInventorySlot.GLOVES.getSlotIdx(), EquipmentInventorySlot.BOOTS.getSlotIdx(), EquipmentInventorySlot.RING.getSlotIdx()
 	};
 	private static final ImageComponent EMPTY_SLOT = new ImageComponent(new BufferedImage(
-		Constants.ITEM_SPRITE_WIDTH,
-		Constants.ITEM_SPRITE_HEIGHT,
+		SLOT_WIDTH,
+		SLOT_HEIGHT,
 		BufferedImage.TYPE_4BYTE_ABGR));
 
 	private final Client client;
 	private final EquipmentPreviewConfig config;
 	private final ItemManager itemManager;
+	private final SpriteManager spriteManager;
 	private final PanelComponent itemGrid = new PanelComponent();
 
 	@Inject
-	private EquipmentPreviewOverlay(Client client, EquipmentPreviewConfig config, ItemManager itemManager)
+	private EquipmentPreviewOverlay(Client client, EquipmentPreviewConfig config, ItemManager itemManager, SpriteManager spriteManager)
 	{
 		this.client = client;
 		this.config = config;
 		this.itemManager = itemManager;
+		this.spriteManager = spriteManager;
 		setPosition(OverlayPosition.DYNAMIC);
-		setLayer(OverlayLayer.ABOVE_WIDGETS);
+		setLayer(OverlayLayer.ALWAYS_ON_TOP);
 		setMovable(true);
 		setSnappable(false);
 		setResizable(false);
@@ -70,7 +77,7 @@ class EquipmentPreviewOverlay extends OverlayPanel
 		panelComponent.setOrientation(ComponentOrientation.VERTICAL);
 
 		itemGrid.setWrap(true);
-		itemGrid.setGap(new Point(GAP_X, 4));
+		itemGrid.setGap(new Point(GAP_X, 0));
 		itemGrid.setBorder(new Rectangle());
 		itemGrid.setBackgroundColor(null);
 		itemGrid.setOrientation(ComponentOrientation.HORIZONTAL);
@@ -80,7 +87,7 @@ class EquipmentPreviewOverlay extends OverlayPanel
 	public Dimension render(Graphics2D graphics)
 	{
 		Widget bank = client.getWidget(InterfaceID.Bankmain.UNIVERSE);
-		if (!config.showPreview() || bank == null || bank.isHidden())
+		if (!config.showPreview() || bank == null)
 		{
 			return null;
 		}
@@ -91,17 +98,13 @@ class EquipmentPreviewOverlay extends OverlayPanel
 		}
 
 		ItemContainer equipment = client.getItemContainer(InventoryID.WORN);
-		if (equipment == null)
-		{
-			return null;
-		}
 
 		EquipmentTotals totals = new EquipmentTotals();
 		itemGrid.getChildren().clear();
 		for (int slot : DISPLAY_SLOTS)
 		{
-			Item item = slot < 0 ? null : equipment.getItem(slot);
-			itemGrid.getChildren().add(item == null || item.getId() < 0 ? EMPTY_SLOT : image(item));
+			Item item = slot < 0 || equipment == null ? null : equipment.getItem(slot);
+			itemGrid.getChildren().add(slot < 0 ? EMPTY_SLOT : item == null || item.getId() < 0 ? slot(null) : slot(item));
 			if (config.showStats() && item != null && item.getId() >= 0)
 			{
 				totals.add(itemManager.getItemStats(item.getId()));
@@ -124,6 +127,31 @@ class EquipmentPreviewOverlay extends OverlayPanel
 			? right
 			: bankLocation.getX() - PANEL_WIDTH - PANEL_GAP;
 		return new Point(x, bankLocation.getY());
+	}
+
+	private ImageComponent slot(Item item)
+	{
+		BufferedImage tile = spriteManager.getSprite(SpriteID.Miscgraphics.EQUIPMENT_SLOT_TILE, 0);
+		if (tile == null)
+		{
+			return item == null ? EMPTY_SLOT : image(item);
+		}
+
+		BufferedImage slot = new BufferedImage(SLOT_WIDTH, SLOT_HEIGHT, BufferedImage.TYPE_4BYTE_ABGR);
+		Graphics2D graphics = slot.createGraphics();
+		graphics.drawImage(tile, 0, 0, SLOT_WIDTH, SLOT_HEIGHT, null);
+		if (item != null)
+		{
+			ItemComposition composition = itemManager.getItemComposition(item.getId());
+			BufferedImage itemImage = itemManager.getImage(item.getId(), item.getQuantity(), composition.isStackable());
+			if (itemImage != null)
+			{
+				graphics.drawImage(itemImage, (SLOT_WIDTH - itemImage.getWidth()) / 2 + 1,
+					(SLOT_HEIGHT - itemImage.getHeight()) / 2, null);
+			}
+		}
+		graphics.dispose();
+		return new ImageComponent(slot);
 	}
 
 	private ImageComponent image(Item item)
