@@ -4,6 +4,8 @@ RuneLite plugin showing currently equipped items beside the bank. Right-click **
 
 Hold **Alt** and drag the preview anywhere on the game canvas; RuneLite remembers its position.
 
+![Bank Equipment Preview example](images/example.png)
+
 ## Build and test locally
 
 Install JDK 11, then run:
