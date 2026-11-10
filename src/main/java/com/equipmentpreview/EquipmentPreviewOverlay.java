@@ -40,6 +40,7 @@ class EquipmentPreviewOverlay extends OverlayPanel
 	private static final int SLOT_HEIGHT = Constants.ITEM_SPRITE_HEIGHT + SLOT_SIZE_ADJUSTMENT;
 	private static final int PANEL_WIDTH = 3 * SLOT_WIDTH + 2 * GAP_X
 		+ 2 * ComponentConstants.STANDARD_BORDER;
+	private static final int PANEL_HEIGHT = 5 * SLOT_HEIGHT + 4 * ComponentConstants.STANDARD_BORDER + 2;
 	private static final int[] DISPLAY_SLOTS = {
 		-1, EquipmentInventorySlot.HEAD.getSlotIdx(), -1,
 		EquipmentInventorySlot.CAPE.getSlotIdx(), EquipmentInventorySlot.AMULET.getSlotIdx(), EquipmentInventorySlot.AMMO.getSlotIdx(),
@@ -57,6 +58,7 @@ class EquipmentPreviewOverlay extends OverlayPanel
 	private final ItemManager itemManager;
 	private final SpriteManager spriteManager;
 	private final PanelComponent itemGrid = new PanelComponent();
+	private Point automaticLocation;
 
 	@Inject
 	private EquipmentPreviewOverlay(Client client, EquipmentPreviewConfig config, ItemManager itemManager, SpriteManager spriteManager)
@@ -87,14 +89,19 @@ class EquipmentPreviewOverlay extends OverlayPanel
 	public Dimension render(Graphics2D graphics)
 	{
 		Widget bank = client.getWidget(InterfaceID.Bankmain.UNIVERSE);
-		if (!config.showPreview() || bank == null)
+		if (!config.showPreview() || bank == null || bank.isHidden())
 		{
 			return null;
 		}
 
-		if (getPreferredLocation() == null)
+		if (isAutomaticLocation(getPreferredLocation(), automaticLocation))
 		{
-			setPreferredLocation(defaultLocation(bank));
+			automaticLocation = defaultLocation(bank);
+			setPreferredLocation(new Point(automaticLocation));
+		}
+		else
+		{
+			automaticLocation = null;
 		}
 
 		ItemContainer equipment = client.getItemContainer(InventoryID.WORN);
@@ -119,6 +126,11 @@ class EquipmentPreviewOverlay extends OverlayPanel
 		return super.render(graphics);
 	}
 
+	static boolean isAutomaticLocation(Point preferred, Point previousAutomatic)
+	{
+		return preferred == null || preferred.equals(previousAutomatic);
+	}
+
 	private Point defaultLocation(Widget bank)
 	{
 		net.runelite.api.Point bankLocation = bank.getCanvasLocation();
@@ -126,7 +138,9 @@ class EquipmentPreviewOverlay extends OverlayPanel
 		int x = right + PANEL_WIDTH <= client.getCanvasWidth()
 			? right
 			: bankLocation.getX() - PANEL_WIDTH - PANEL_GAP;
-		return new Point(x, bankLocation.getY());
+		int y = Math.max(0, Math.min(bankLocation.getY(), client.getCanvasHeight() - PANEL_HEIGHT));
+		x = Math.max(0, Math.min(x, client.getCanvasWidth() - PANEL_WIDTH));
+		return new Point(x, y);
 	}
 
 	private ImageComponent slot(Item item)

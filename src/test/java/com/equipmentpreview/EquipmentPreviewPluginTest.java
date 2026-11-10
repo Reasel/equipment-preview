@@ -24,6 +24,17 @@ public class EquipmentPreviewPluginTest
 	}
 
 	@Test
+	public void automaticPositionFollowsLayoutButPreservesCustomPositions()
+	{
+		java.awt.Point automatic = new java.awt.Point(500, 100);
+		assertTrue(EquipmentPreviewOverlay.isAutomaticLocation(null, null));
+		assertTrue(EquipmentPreviewOverlay.isAutomaticLocation(new java.awt.Point(500, 100), automatic));
+		assertFalse(EquipmentPreviewOverlay.isAutomaticLocation(new java.awt.Point(200, 300), automatic));
+		assertFalse(EquipmentPreviewOverlay.isAutomaticLocation(new java.awt.Point(200, 300), null));
+		assertTrue(EquipmentPreviewOverlay.isAutomaticLocation(null, automatic));
+	}
+
+	@Test
 	public void addsEquipmentBonuses()
 	{
 		EquipmentTotals totals = new EquipmentTotals();
