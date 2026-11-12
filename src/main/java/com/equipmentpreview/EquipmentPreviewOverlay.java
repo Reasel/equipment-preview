@@ -68,7 +68,7 @@ class EquipmentPreviewOverlay extends OverlayPanel
 		this.itemManager = itemManager;
 		this.spriteManager = spriteManager;
 		setPosition(OverlayPosition.DYNAMIC);
-		setLayer(OverlayLayer.ALWAYS_ON_TOP);
+		setLayer(OverlayLayer.ABOVE_WIDGETS);
 		setMovable(true);
 		setSnappable(false);
 		setResizable(false);
